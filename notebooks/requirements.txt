@@ -1,0 +1,7 @@
+# Analysis-only deps (kept separate from the app's backend/requirements.txt).
+# Installed into an isolated .venv to avoid the broken pandas in the base Anaconda env.
+pandas>=2.2
+numpy>=2.0
+matplotlib>=3.8
+ipykernel>=6.29
+nbconvert>=7.16
