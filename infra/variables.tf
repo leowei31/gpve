@@ -124,6 +124,16 @@ variable "github_repo" {
   default     = ""
 }
 
+variable "github_connection_name" {
+  description = <<-EOT
+    Short name of the 2nd-gen Cloud Build host connection created in the Console
+    (Cloud Build > Repositories > 2nd gen). Must be created in `region`. Required when
+    enable_ci_trigger = true.
+  EOT
+  type        = string
+  default     = ""
+}
+
 variable "github_branch" {
   description = "Branch regex the Cloud Build trigger fires on."
   type        = string
