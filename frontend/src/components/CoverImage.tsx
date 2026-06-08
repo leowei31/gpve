@@ -13,16 +13,21 @@ export default function CoverImage({
   className?: string;
 }) {
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const showImg = src && !failed;
 
   if (showImg) {
     return (
+      // Fade the cover in once it decodes (no flash of a half-loaded image).
       <img
         src={src!}
         alt={alt}
         loading="lazy"
+        onLoad={() => setLoaded(true)}
         onError={() => setFailed(true)}
-        className={`h-full w-full object-cover ${className}`}
+        className={`h-full w-full object-cover transition-opacity duration-500 ${
+          loaded ? "opacity-100" : "opacity-0"
+        } ${className}`}
       />
     );
   }

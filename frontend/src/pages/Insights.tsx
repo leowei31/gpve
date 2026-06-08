@@ -6,10 +6,14 @@ import Spinner from "../components/Spinner";
 export default function Insights() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [grown, setGrown] = useState(false);
 
   useEffect(() => {
     getStats()
-      .then(setStats)
+      .then((s) => {
+        setStats(s);
+        requestAnimationFrame(() => setGrown(true)); // grow the bars in
+      })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load stats"));
   }, []);
 
@@ -21,7 +25,7 @@ export default function Insights() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Catalog Insights</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Catalog Insights</h1>
         <p className="text-sm text-gp-muted">
           {stats.total} games · avg rating {stats.avg_rating ?? "—"} · a 2022 Game Pass snapshot
         </p>
@@ -31,11 +35,17 @@ export default function Insights() {
         <div className="card p-5">
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gp-muted">Top genres</h2>
           <div className="space-y-2">
-            {stats.top_genres.map((g) => (
+            {stats.top_genres.map((g, i) => (
               <div key={g.name} className="flex items-center gap-3">
                 <span className="w-24 shrink-0 truncate text-sm">{g.name}</span>
                 <div className="h-3 flex-1 overflow-hidden rounded-full bg-gp-panel">
-                  <div className="h-full rounded-full bg-gp-green" style={{ width: `${(g.n / maxGenre) * 100}%` }} />
+                  <div
+                    className="h-full rounded-full bg-gp-green transition-[width] duration-700 ease-out"
+                    style={{
+                      width: `${grown ? (g.n / maxGenre) * 100 : 0}%`,
+                      transitionDelay: `${i * 40}ms`,
+                    }}
+                  />
                 </div>
                 <span className="w-8 text-right text-xs tabular-nums text-gp-muted">{g.n}</span>
               </div>
@@ -45,7 +55,7 @@ export default function Insights() {
 
         <div className="card p-5">
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gp-muted">Common vibe tags</h2>
-          <div className="flex flex-wrap gap-2">
+          <div className="stagger flex flex-wrap gap-2">
             {stats.top_tags.map((t) => (
               <span key={t.name} className="chip" style={{ fontSize: `${0.7 + Math.min(t.n / 120, 0.5)}rem` }}>
                 {t.name}
@@ -60,7 +70,7 @@ export default function Insights() {
         <p className="mb-4 text-sm text-gp-muted">
           Highly rated, lightly played — the back-catalog worth reigniting.
         </p>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="stagger grid grid-cols-2 gap-4 sm:grid-cols-4">
           {stats.hidden_gems.map((g) => (
             <GameCard
               key={g.title}

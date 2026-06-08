@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { recommend, type Recommendation, type VibeResponse } from "../lib/api";
 import CoverImage from "../components/CoverImage";
 import Spinner from "../components/Spinner";
@@ -11,12 +11,15 @@ const SUGGESTIONS = [
   "a short clever puzzle game for a quick break",
 ];
 
-function ScoreBar({ label, value }: { label: string; value: number }) {
+function ScoreBar({ label, value, shown, delay }: { label: string; value: number; shown: boolean; delay: number }) {
   return (
     <div className="flex items-center gap-2">
       <span className="w-12 shrink-0 text-[10px] uppercase tracking-wide text-gp-muted">{label}</span>
       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gp-panel">
-        <div className="h-full rounded-full bg-gp-glow/80" style={{ width: `${Math.round(value * 100)}%` }} />
+        <div
+          className="h-full rounded-full bg-gp-glow/80 transition-[width] duration-700 ease-out"
+          style={{ width: `${shown ? Math.round(value * 100) : 0}%`, transitionDelay: `${delay}ms` }}
+        />
       </div>
       <span className="w-8 shrink-0 text-right text-[10px] tabular-nums text-gp-muted">
         {value.toFixed(2)}
@@ -26,11 +29,18 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
 }
 
 function ResultCard({ rec, rank }: { rec: Recommendation; rank: number }) {
+  // Grow the score bars in once the card has mounted.
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setShown(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
   return (
-    <article className="card flex flex-col overflow-hidden sm:flex-row">
-      <div className="relative aspect-[16/10] w-full shrink-0 sm:aspect-auto sm:w-56">
+    <article className="card flex flex-col overflow-hidden hover:-translate-y-0.5 hover:border-gp-glow/30 sm:flex-row">
+      <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden sm:aspect-auto sm:w-56">
         <CoverImage src={rec.cover_url} alt={rec.title} />
-        <span className="absolute left-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-gp-green text-xs font-bold text-white shadow-glow">
+        <span className="absolute left-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-gp-green text-xs font-bold text-white shadow-soft">
           {rank}
         </span>
       </div>
@@ -51,9 +61,9 @@ function ResultCard({ rec, rank }: { rec: Recommendation; rank: number }) {
         </div>
         {rec.rationale && <p className="text-sm leading-relaxed text-gray-300">{rec.rationale}</p>}
         <div className="mt-auto grid gap-1 pt-1">
-          <ScoreBar label="vibe" value={rec.vibe_similarity} />
-          <ScoreBar label="metrics" value={rec.metric_score} />
-          <ScoreBar label="web" value={rec.web_score} />
+          <ScoreBar label="vibe" value={rec.vibe_similarity} shown={shown} delay={0} />
+          <ScoreBar label="metrics" value={rec.metric_score} shown={shown} delay={80} />
+          <ScoreBar label="web" value={rec.web_score} shown={shown} delay={160} />
         </div>
         {rec.sources.length > 0 && (
           <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1 text-[11px] text-gp-muted">
@@ -61,7 +71,7 @@ function ResultCard({ rec, rank }: { rec: Recommendation; rank: number }) {
             {rec.sources.slice(0, 3).map(
               (s, i) =>
                 s.url && (
-                  <a key={i} href={s.url} target="_blank" rel="noreferrer" className="truncate hover:text-gp-glow">
+                  <a key={i} href={s.url} target="_blank" rel="noreferrer" className="truncate transition-colors hover:text-gp-glow">
                     {s.title?.slice(0, 36) || s.url}
                   </a>
                 )
@@ -95,12 +105,12 @@ export default function Discover() {
   }
 
   return (
-    <div className="space-y-8">
-      <section className="space-y-4 pt-4 text-center">
-        <h1 className="text-3xl font-bold sm:text-4xl">
+    <div className="space-y-10">
+      <section className="space-y-5 pt-6 text-center">
+        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
           What's your <span className="text-gp-glow">vibe</span>?
         </h1>
-        <p className="mx-auto max-w-xl text-sm text-gp-muted">
+        <p className="mx-auto max-w-xl text-sm leading-relaxed text-gp-muted">
           Describe a feeling, a mood, an occasion — get 5 older Game Pass titles matched to it,
           blending your vibe, the catalog's 2022 stats, and live web reputation.
         </p>
@@ -115,13 +125,9 @@ export default function Discover() {
             value={vibe}
             onChange={(e) => setVibe(e.target.value)}
             placeholder="e.g. something eerie and atmospheric to play alone late at night"
-            className="flex-1 rounded-xl border border-gp-line bg-gp-panel/70 px-4 py-3 text-sm outline-none transition focus:border-gp-glow/60 focus:shadow-glow"
+            className="field flex-1"
           />
-          <button
-            type="submit"
-            disabled={loading || !vibe.trim()}
-            className="rounded-xl bg-gp-green px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-40"
-          >
+          <button type="submit" disabled={loading || !vibe.trim()} className="btn-primary">
             {loading ? "Matching…" : "Find my games"}
           </button>
         </form>
@@ -135,7 +141,7 @@ export default function Discover() {
       </section>
 
       {error && (
-        <div className="mx-auto max-w-2xl rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <div className="mx-auto max-w-2xl animate-fade-up rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
           {error}
         </div>
       )}
@@ -143,7 +149,7 @@ export default function Discover() {
       {loading && <Spinner label="Reading the vibe, searching the catalog & the web…" />}
 
       {!loading && result && (
-        <section className="space-y-4">
+        <section className="animate-fade-up space-y-4">
           <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-gp-muted">
             <span>interpreted as</span>
             {result.intent.mood_tags.map((m) => (
@@ -152,7 +158,7 @@ export default function Discover() {
             <span className="chip">session: {result.intent.session_length}</span>
             <span className="chip">play: {result.intent.social}</span>
           </div>
-          <div className="grid gap-4">
+          <div className="stagger grid gap-4">
             {result.recommendations.map((rec, i) => (
               <ResultCard key={rec.title} rec={rec} rank={i + 1} />
             ))}

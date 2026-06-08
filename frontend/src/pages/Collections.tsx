@@ -35,7 +35,7 @@ export default function Collections() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Collections</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Collections</h1>
           <p className="text-sm text-gp-muted">{total} games · browse the enriched catalog</p>
         </div>
         <div className="flex items-center gap-2">
@@ -43,12 +43,12 @@ export default function Collections() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search titles…"
-            className="rounded-lg border border-gp-line bg-gp-panel/70 px-3 py-1.5 text-sm outline-none focus:border-gp-glow/60"
+            className="field py-1.5"
           />
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as Sort)}
-            className="rounded-lg border border-gp-line bg-gp-panel/70 px-3 py-1.5 text-sm outline-none focus:border-gp-glow/60"
+            className="field cursor-pointer py-1.5"
           >
             <option value="rating">Top rated</option>
             <option value="popularity">Most played</option>
@@ -74,8 +74,13 @@ export default function Collections() {
 
       {loading ? (
         <Spinner />
+      ) : games.length === 0 ? (
+        <p className="py-16 text-center text-sm text-gp-muted">No games match those filters.</p>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div
+          key={`${genre}-${sort}-${total}`}
+          className="stagger grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
+        >
           {games.map((g) => (
             <GameCard key={g.title} title={g.title} cover_url={g.cover_url} genres={g.genres} rating={g.rating} />
           ))}
