@@ -1,0 +1,19 @@
+# Keep the build context small and secrets out of the image.
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+.venv/
+**/node_modules/
+frontend/dist/
+**/.env
+backend/.env
+*.env.local
+.git/
+.ipynb_checkpoints/
+notebooks/
+# The seed/re-load Job needs the catalog + enrichment + embeddings caches baked in, so keep
+# those; only the runtime-generated / local-only artifacts are excluded.
+data/web_reputation_cache.json
+data/enrichment_misses.json
+*.md
+docs/

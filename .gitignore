@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# Secrets / local config
+backend/.env
+*.env.local
+
+# Node / frontend (added in Day 2)
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Generated ingestion artifacts. cleaned_games.json is trivially regenerable (stdlib, no
+# key) so we don't track it. The enrichment cache (data/enrichment_cache.json) IS committed
+# on purpose — rebuilding it needs a RAWG key + network — so the app runs offline and
+# reproducibly. See README "Enrichment".
+data/cleaned_games.json
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,24 @@
+# Local development data layer: PostgreSQL + pgvector.
+# Production swaps this for Cloud SQL — only DATABASE_URL changes (see DESIGN_RATIONALE.md ADR-1).
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: gpve-postgres
+    environment:
+      POSTGRES_USER: gpve
+      POSTGRES_PASSWORD: gpve
+      POSTGRES_DB: gpve
+    ports:
+      - "5432:5432"
+    volumes:
+      - gpve_pgdata:/var/lib/postgresql/data
+      # schema.sql + match_games.sql run automatically on first boot of an empty volume.
+      - ./backend/sql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gpve -d gpve"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  gpve_pgdata:
