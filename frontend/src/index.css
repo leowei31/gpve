@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-gp-ink text-gray-100 antialiased;
+    background-image: radial-gradient(
+      1200px 600px at 70% -10%,
+      rgba(16, 124, 16, 0.18),
+      transparent 60%
+    );
+  }
+}
+
+@layer components {
+  .chip {
+    @apply inline-flex items-center rounded-full border border-gp-line bg-gp-panel/70 px-3 py-1 text-xs text-gp-muted transition hover:border-gp-glow/50 hover:text-gray-100;
+  }
+  .card {
+    @apply rounded-2xl border border-gp-line bg-gp-card/80 backdrop-blur;
+  }
+}
