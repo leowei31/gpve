@@ -104,10 +104,14 @@ flowchart TD
     NAV[Top nav] --> D[Discover<br/>vibe search → 5 results inline]
     NAV --> C[Collections<br/>filter + sort catalog grid]
     NAV --> I[Insights<br/>genres · tags · hidden gems]
+    C --> G[Game detail<br/>full metrics + Similar games]
+    I --> G
+    G --> G
 ```
 
-🔜 **Deferred sitemap nodes** (see §18): a Results route as its own sharable URL, Game detail +
-Similar games, curated Collection detail, and a standalone Browse route distinct from Collections.
+🔜 **Deferred sitemap nodes** (see §18): a Results route as its own sharable URL, curated
+Collection detail, and a standalone Browse route distinct from Collections. **✅ Game detail +
+Similar games shipped** (§18.1) — reachable from any Collections / Insights / Similar card.
 
 ---
 
@@ -252,10 +256,10 @@ Per game, grounded Gemini call writes 2–4 sentences using **only** that game's
 - Emit exactly **5** in the response schema (§6.2). Dead/missing `cover_url`s fall back to a
   generated tile **client-side** (`CoverImage.tsx`) — not a backend HTTP check.
 
-**Reuse note (🔜 deferred — §18):** these reuses are designed but not yet built. *Curated
-Collections* would run this pipeline once per fixed vibe and cache the result; *Similar games*
-would skip the pipeline entirely — a pure `match_games` call on a game's own vector (the
-`exclude_id` arg already exists in `sql/02_match_games.sql` but is currently unused).
+**Reuse note:** *Similar games* (✅ shipped — §18.1) skips the pipeline entirely — it feeds a game
+its **own** vector to `match_games(…, exclude_id=self)` ([sql/02_match_games.sql](../backend/sql/02_match_games.sql)),
+so it's instant and LLM-free. *Curated Collections* (🔜 deferred — §18) would instead run the full
+pipeline once per fixed vibe and cache the result.
 
 ---
 
@@ -270,8 +274,8 @@ would skip the pipeline entirely — a pure `match_games` call on a game's own v
 | `GET` | `/api/stats` | catalog aggregates (genres, tags, hidden gems) | Insights / Collections | ✅ shipped (planned as `/api/insights`) |
 | `GET` | `/api/health` | liveness/readiness | — | ✅ shipped |
 | `GET` | `/*` | serve compiled React app | all | ✅ shipped |
-| `GET` | `/api/games/{id}` | full game profile | Game detail | 🔜 deferred (§18) |
-| `GET` | `/api/games/{id}/similar` | nearest-neighbor games (`match_games`) | Game detail | 🔜 deferred (§18) |
+| `GET` | `/api/games/{id}` | full game profile | Game detail | ✅ shipped (§18.1) |
+| `GET` | `/api/games/{id}/similar` | nearest-neighbor games (`match_games`, `exclude_id=self`) | Game detail | ✅ shipped (§18.1) |
 | `GET` | `/api/collections` | list curated collections | Collections (moods) | 🔜 deferred (§18) |
 | `GET` | `/api/collections/{slug}` | a collection's games (cached) | Collection detail | 🔜 deferred (§18) |
 
@@ -311,8 +315,9 @@ nesting them under `metrics` / `modern_reputation` as the original draft did.)
 - `GET /api/games` → `{ total, games: [...] }` (each game: `title`, `cover_url`, `genres`, `tags`, `rating`, `gamers`, `time_midpoint`, `released`, `summary`).
 - `GET /api/stats` → `{ total, avg_rating, top_genres: [{name,n}], top_tags: [{name,n}], hidden_gems: [{title, rating, gamers, cover_url, genres}] }`.
 
-🔜 **Deferred shapes** (Game detail, Similar, Collections, richer `/api/stats` histograms) are
-specced in **§18**; the endpoints are already listed with 🔜 in §6.1.
+- `GET /api/games/{id}` → the full row (all metric columns: `rating`, `gamers`, `completion_pct`, `time_*`, `metacritic`, `game_score`, `true_achievement`, plus `genres`/`tags`/`summary`/`cover_url`). `GET /api/games/{id}/similar` → `{ games: [{ id, title, cover_url, genres, rating, released, similarity }] }`. *(✅ shipped — §18.1.)*
+
+🔜 **Deferred shapes** (Collections, richer `/api/stats` histograms) are specced in **§18**.
 
 ---
 
@@ -349,10 +354,20 @@ extracted. Styling is **Tailwind only** (no shadcn/ui).
 **Polish (shipped):** loading spinners (the web step is slow), empty/error states, responsive grid
 layout, consistent spacing/typography via Tailwind.
 
-### 7.2 🔜 Deferred pages & UI (§18)
+### 7.2 ✅ Game detail + Similar games (§18.1 — shipped)
+
+**Game detail** (`/game/:id`) — reached by clicking any catalog card (Collections, Insights hidden
+gems, or a Similar-games tile). Renders the cover, title/year/genres, full tag list, summary, a
+metric-tile grid (rating · players · avg playtime · completion · Metacritic · gamerscore ·
+TrueAchievement, each shown only when present), and a **Similar games** strip. Similar comes from
+`GET /api/games/{id}/similar` — a pure `match_games(own_vector, exclude_id=self)` vector search (no
+LLM, instant), each tile showing its `% match`. `GameCard` gained an optional `id` so it links to
+detail; the page is a thin layer over two read endpoints (no new pipeline).
+
+### 7.3 🔜 Deferred pages & UI (§18)
 
 Originally specified here but **not yet built**: a sharable **Results** route (`/results?vibe=…`),
-**Game detail** (`/game/:id`) + **Similar games**, a standalone **Browse** route distinct from
+a standalone **Browse** route distinct from
 Collections, **curated mood Collections** + **Collection detail**, richer **Insights** charts
 (completion-vs-rating scatter, playtime histogram, a chart library), and Discover extras
 (**Surprise me**, **refinement chips**).
@@ -373,7 +388,8 @@ Collections, **curated mood Collections** + **Collection detail**, richer **Insi
 | REQ-008 | Render cover art per game | Cards / detail (§7) | Built |
 | REQ-009 | Per-game vibe rationale block | Stage 5 + Results | Built |
 | Additive | Catalog browser (Collections route) + Insights dashboard | §7.1 | Built |
-| Additive | Game detail, Similar games, curated Collections, standalone Browse | §18 | Deferred |
+| Additive | Game detail + Similar games | §7.2 / §18.1 | Built |
+| Additive | Curated Collections, standalone Browse | §18 | Deferred |
 | README | System architecture / scaling | §10, §11 | Documented |
 | README | Prompt-engineering / determinism | §12 | Documented |
 | README | AI collaboration log | §13 | Documented |
@@ -499,8 +515,8 @@ flowchart LR
 > consolidated (`catalog.py` + `recommend.py`); the LLM client is `gemini.py` (+ `tavily.py`);
 > the pipeline has `metric.py` + `reputation.py` + a `recommend.py` orchestrator; Dockerfile +
 > `cloudbuild.yaml` live at the repo root; SQL files are numbered; `seed.py` was added; frontend
-> is 3 pages. 🔜 Files for deferred features (Game detail, curated Collections, charts,
-> `build_collections.py`) are not present — see §18.
+> is 4 pages (Game detail added — §18.1). 🔜 Files for the remaining deferred features (curated
+> Collections, charts, `build_collections.py`) are not present — see §18.
 
 ```
 gpve/
@@ -558,7 +574,8 @@ gpve/
 │   │   ├── pages/
 │   │   │   ├── Discover.tsx        # vibe search + inline results
 │   │   │   ├── Collections.tsx     # filter/sort catalog browser
-│   │   │   └── Insights.tsx        # stats dashboard
+│   │   │   ├── Insights.tsx        # stats dashboard
+│   │   │   └── GameDetail.tsx      # §18.1 — full profile + Similar games
 │   │   └── components/
 │   │       ├── Layout.tsx
 │   │       ├── GameCard.tsx
@@ -590,10 +607,9 @@ The 3-page MVP (§7.1) satisfies all functional requirements; these were specifi
 plan but cut to protect the core. Ordered by value-for-effort; most backend foundations already
 exist, so they're largely additive.
 
-1. **Game detail + Similar games** *(highest value, lowest effort)* — `GET /api/games/{id}` +
-   `/similar` (wire the existing `match_games(…, exclude_id)`, already supported but unused), and
-   a `/game/:id` page with the full metric set + a SimilarGames strip. Similar is pure vector
-   search (no LLM) → instant and free.
+1. ~~**Game detail + Similar games**~~ — **✅ shipped** (§7.2). `GET /api/games/{id}` + `/similar`
+   wire the existing `match_games(…, exclude_id=self)`; the `/game/:id` page shows the full metric
+   set + a Similar-games strip. Pure vector search (no LLM) → instant and free.
 2. **Sharable Results route** — promote Discover's inline results to `/results?vibe=…` so a set is bookmarkable.
 3. **Curated Collections + detail** — `ingest/build_collections.py` runs the pipeline once per
    fixed mood vibe and caches it; `GET /api/collections[/{slug}]` serve from cache; rename the

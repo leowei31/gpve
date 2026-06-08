@@ -82,7 +82,7 @@ export default function Collections() {
           className="stagger grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
         >
           {games.map((g) => (
-            <GameCard key={g.title} title={g.title} cover_url={g.cover_url} genres={g.genres} rating={g.rating} />
+            <GameCard key={g.id} id={g.id} title={g.title} cover_url={g.cover_url} genres={g.genres} rating={g.rating} />
           ))}
         </div>
       )}

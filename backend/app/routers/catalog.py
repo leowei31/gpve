@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 
 router = APIRouter()
 
@@ -36,7 +36,7 @@ async def stats(request: Request) -> dict:
             "group by t order by n desc limit 20")
         # Hidden gems: well-rated but low player count (EDA §8) — high rating, low popularity.
         hidden_gems = await conn.fetch(
-            "select title, rating, gamers, cover_url, genres from games "
+            "select id, title, rating, gamers, cover_url, genres from games "
             "where rating >= 4.1 and gamers is not null and gamers > 0 "
             "order by rating desc, gamers asc limit 8")
     return {
@@ -71,7 +71,7 @@ async def list_games(
     clause = " and ".join(where)
     args.extend([limit, offset])
     sql = (
-        "select title, cover_url, genres, tags, rating, gamers, time_midpoint, released, summary "
+        "select id, title, cover_url, genres, tags, rating, gamers, time_midpoint, released, summary "
         f"from games where {clause} order by {order}, gamers desc nulls last "
         f"limit ${len(args) - 1} offset ${len(args)}"
     )
@@ -79,3 +79,49 @@ async def list_games(
         rows = await conn.fetch(sql, *args)
         total = await conn.fetchval(f"select count(*) from games where {clause}", *args[:-2])
     return {"total": total, "games": [_clean(r) for r in rows]}
+
+
+# Full single-game profile + nearest-neighbour "similar games" (deferred §18.1 → shipped).
+# Both keep the routes after /games so the static segments aren't shadowed by the {game_id} path.
+_GAME_SQL = """
+select id, title, cover_url, genres, tags, rating, gamers, completion_pct,
+       time_min_hours, time_max_hours, time_midpoint, released, metacritic,
+       summary, true_achievement, game_score
+from games where id = $1
+"""
+
+# Reuse match_games(query, count, exclude_id): feed a game its own embedding and exclude itself.
+# The lateral join yields zero rows when the game is missing or unembedded, so similarity is
+# never null. We join back to games for the display columns the catalog cards need.
+_SIMILAR_SQL = """
+with target as (
+  select embedding from games where id = $1 and embedding is not null
+)
+select g.id, g.title, g.cover_url, g.genres, g.rating, g.released, m.similarity
+from target t
+cross join lateral match_games(t.embedding, $2, $1) m
+join games g on g.id = m.id
+order by m.similarity desc
+"""
+
+
+@router.get("/games/{game_id}")
+async def get_game(game_id: int, request: Request) -> dict:
+    """Full profile for the Game detail page (all display metrics for one title)."""
+    async with request.app.state.pool.acquire() as conn:
+        row = await conn.fetchrow(_GAME_SQL, game_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Game not found")
+    return _clean(row)
+
+
+@router.get("/games/{game_id}/similar")
+async def similar_games(
+    game_id: int,
+    request: Request,
+    limit: int = Query(6, ge=1, le=24),
+) -> dict:
+    """Nearest neighbours by vibe embedding — pure vector search, no LLM (instant, free)."""
+    async with request.app.state.pool.acquire() as conn:
+        rows = await conn.fetch(_SIMILAR_SQL, game_id, limit)
+    return {"games": [_clean(r) for r in rows]}

@@ -73,7 +73,8 @@ export default function Insights() {
         <div className="stagger grid grid-cols-2 gap-4 sm:grid-cols-4">
           {stats.hidden_gems.map((g) => (
             <GameCard
-              key={g.title}
+              key={g.id}
+              id={g.id}
               title={g.title}
               cover_url={g.cover_url}
               genres={g.genres}

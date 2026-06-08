@@ -1,20 +1,29 @@
+import { Link } from "react-router-dom";
 import CoverImage from "./CoverImage";
 
 export default function GameCard({
+  id,
   title,
   cover_url,
   genres,
   rating,
   footer,
 }: {
+  id?: number;
   title: string;
   cover_url: string | null;
   genres: string[];
   rating: number | null;
   footer?: React.ReactNode;
 }) {
+  // When we know the game id, the whole card links to its detail page; otherwise it's static.
+  const Wrapper = id != null ? Link : "div";
+  const wrapperProps = id != null ? { to: `/game/${id}` } : {};
   return (
-    <div className="card group overflow-hidden hover:-translate-y-1 hover:border-gp-glow/30 hover:shadow-glow">
+    <Wrapper
+      {...(wrapperProps as any)}
+      className="card group block overflow-hidden hover:-translate-y-1 hover:border-gp-glow/30 hover:shadow-glow"
+    >
       <div className="relative aspect-[16/10] overflow-hidden">
         <CoverImage
           src={cover_url}
@@ -36,6 +45,6 @@ export default function GameCard({
         <p className="mt-0.5 truncate text-xs text-gp-muted">{genres.slice(0, 3).join(" · ") || "—"}</p>
         {footer}
       </div>
-    </div>
+    </Wrapper>
   );
 }

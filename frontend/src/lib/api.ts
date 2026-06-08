@@ -36,6 +36,7 @@ export interface VibeResponse {
 }
 
 export interface Game {
+  id: number;
   title: string;
   cover_url: string | null;
   genres: string[];
@@ -47,12 +48,43 @@ export interface Game {
   summary: string | null;
 }
 
+// Full single-game profile (GET /api/games/{id}) — the extra metric columns the detail page shows.
+export interface GameDetail {
+  id: number;
+  title: string;
+  cover_url: string | null;
+  genres: string[];
+  tags: string[];
+  rating: number | null;
+  gamers: number | null;
+  completion_pct: number | null;
+  time_min_hours: number | null;
+  time_max_hours: number | null;
+  time_midpoint: number | null;
+  released: string | null;
+  metacritic: number | null;
+  summary: string | null;
+  true_achievement: number | null;
+  game_score: number | null;
+}
+
+// A nearest-neighbour entry (GET /api/games/{id}/similar) — lean shape for the similar-games grid.
+export interface SimilarGame {
+  id: number;
+  title: string;
+  cover_url: string | null;
+  genres: string[];
+  rating: number | null;
+  released: string | null;
+  similarity: number;
+}
+
 export interface Stats {
   total: number;
   avg_rating: number | null;
   top_genres: { name: string; n: number }[];
   top_tags: { name: string; n: number }[];
-  hidden_gems: { title: string; rating: number; gamers: number; cover_url: string | null; genres: string[] }[];
+  hidden_gems: { id: number; title: string; rating: number; gamers: number; cover_url: string | null; genres: string[] }[];
 }
 
 async function json<T>(res: Response): Promise<T> {
@@ -86,4 +118,12 @@ export function getGames(params: {
   if (params.sort) q.set("sort", params.sort);
   q.set("limit", "48");
   return fetch(`/api/games?${q}`).then((r) => json<{ total: number; games: Game[] }>(r));
+}
+
+export function getGame(id: number | string): Promise<GameDetail> {
+  return fetch(`/api/games/${id}`).then((r) => json<GameDetail>(r));
+}
+
+export function getSimilar(id: number | string): Promise<{ games: SimilarGame[] }> {
+  return fetch(`/api/games/${id}/similar`).then((r) => json<{ games: SimilarGame[] }>(r));
 }
